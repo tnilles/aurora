@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aurora</title>
+  <style>
+    :root {
+      --led-size: 20px;
+      --led-border-size: 0px;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background-color: black;
+    }
+
+    .row {
+      line-height: 0;
+      padding: 0;
+      margin: 0;
+      min-width: calc(calc(var(--led-size) + calc(var(--led-border-size) * 2)) * 28);
+    }
+
+    .led {
+      width: var(--led-size);
+      height: var(--led-size);
+      border: var(--led-border-size) solid grey;
+      display: inline-block;
+      position: relative;
+    }
+
+    .led-light {
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      /* box-shadow: 0px 0px 24px 21px #F44336; */
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      z-index: 1;
+    }
+  </style>
+</head>
+<body>
+  <div id="panel"></div>
+
+  <script src="main.js"></script>
+</body>
+</html>
