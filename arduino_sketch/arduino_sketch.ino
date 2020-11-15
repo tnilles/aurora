@@ -29,6 +29,7 @@
 #define ROWS      13
 #define COLS      27
 #define LED_COUNT COLS * ROWS
+#define AURORA_LEN 20
 
 // Declare our NeoPixel strip object:
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -48,6 +49,18 @@ uint32_t matrix[ROWS][COLS];
 
 // setup() function -- runs once at startup --------------------------------
 
+int starting_lines_row[AURORA_LEN];
+int starting_lines_col[AURORA_LEN];
+int lines_len[AURORA_LEN];
+
+void init_lines() {
+  for (int i = 0; i < AURORA_LEN; i++) {
+    starting_lines_row[i] = 10;
+    starting_lines_col[i] = i + 3;
+    lines_len[i] = rand() % 4 + 3;
+  }
+}
+
 void setup() {
   // These lines are specifically to support the Adafruit Trinket 5V 16 MHz.
   // Any other board, you can remove this part (but no harm leaving it):
@@ -60,6 +73,8 @@ void setup() {
   strip.show();            // Turn OFF all pixels ASAP
   strip.setBrightness(50); // Set BRIGHTNESS to about 1/5 (max = 255)
 
+  init_lines();
+
   srand(time(NULL));
 }
 
@@ -69,26 +84,30 @@ void setup() {
 uint32_t blue = strip.Color(59, 59, 111);
 uint32_t red = strip.Color(180, 47, 53);
 uint32_t white = strip.Color(50, 50, 95);
+uint32_t white2 = strip.Color(70, 70, 135);
 
 
 // uint32_t background = strip.Color(40, 10, 93);
 uint32_t background = strip.Color(1, 1, 19);
 
 void loop() {
-  Serial.begin(9600); // Démarrage de la communication série  
-  Serial.print("starting...");
+  //Serial.begin(9600); // Démarrage de la communication série  
+  //Serial.print("starting...");
 
 //  bhm_line(0, 0, 10, 0, red);
 //  bhm_line(0, 0, 10, 10, red);
 //  bhm_line(0, 0, 0, 10, red);
 
   //rainbowStripes(1);
-
+  //return;
   for (int i = 0; i < 27 + 13; i++) {
     //bhm_gradient_line(0, i, i, 0, 0, 65534);
   }
-  clearScreen();
-  aurora();
+
+  aurora_loop();
+  
+  clear_screen();
+  render_lines();
   strip.show();
 
   //usFlag();
@@ -122,21 +141,92 @@ void loop() {
 
 // Some functions of our own for creating animated effects -----------------
 
-void clearScreen() {
+void aurora_loop() {
+  while (true) {
+    clear_screen();
+    update_lines();
+    render_lines();
+    strip.show();
+    delay(50);
+  }
+}
+
+void clear_screen() {
   for (int i = 0; i < LED_COUNT; i++) {
     strip.setPixelColor(i, background);
   }
 
   // Stars
-  strip.setPixelColor(cartesianToStrip(3, 1), white);
-  strip.setPixelColor(cartesianToStrip(2, 11), white);
-  strip.setPixelColor(cartesianToStrip(6, 10), white);
-  strip.setPixelColor(cartesianToStrip(7, 12), white);
-  strip.setPixelColor(cartesianToStrip(11, 11), white);
-  strip.setPixelColor(cartesianToStrip(17, 9), white);
-  strip.setPixelColor(cartesianToStrip(23, 12), white);
-  strip.setPixelColor(cartesianToStrip(26, 8), white);
-  strip.setPixelColor(cartesianToStrip(25, 3), white);
+  strip.setPixelColor(cartesianToStrip(3, 1), (rand() % 2 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(2, 11), (rand() % 2 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(6, 10), (rand() % 2 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(7, 12), (rand() % 2 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(11, 11), (rand() % 2 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(17, 9), (rand() % 2 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(23, 12), (rand() % 2 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(26, 8), (rand() % 2 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(25, 3), (rand() % 2 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(7, 6), (rand() % 2 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(21, 4), (rand() % 2 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(15, 2), (rand() % 2 == 0) ? white : white2);
+}
+
+void render_lines() {
+  for (int i = 0; i < AURORA_LEN; i++) {
+    bhm_gradient_line_rgb(starting_lines_col[i], starting_lines_row[i], starting_lines_col[i], starting_lines_row[i] - lines_len[i], 119, 0, 119, 115, 222, 86); //60300, 19300);
+  }
+}
+
+void update_lines() {
+  int col_modifier = 0;
+  
+  // Update starting cols
+  if (rand() % 2 == 0 && starting_lines_row[0] > 0) {
+    col_modifier = -1;
+  } else if (rand() % 2 == 1 && starting_lines_row[AURORA_LEN] < 27) {
+    col_modifier = 1;
+  }
+  
+  for (int i = 0; i < AURORA_LEN; i++) {
+    // Update starting cols
+    //starting_lines_col[i] = starting_lines_col[i] + col_modifier;
+    
+    // Update starting rows
+    if (i == 0) {
+      if (rand() % 2 == 0 && starting_lines_row[i] > 0) {
+        starting_lines_row[i]--;
+      } else if(starting_lines_row[i] < 12) {
+        starting_lines_row[i]++;
+      }
+    } else {
+      if (starting_lines_row[i - 1] - starting_lines_row[i] > 1) {
+        starting_lines_row[i]++;
+      } else if (starting_lines_row[i - 1] - starting_lines_row[i] < -1) {
+        starting_lines_row[i]--;
+      } else if (starting_lines_row[i - 1] - starting_lines_row[i] == 1) {
+        if (rand() % 2 == 0 && starting_lines_row[i] < 12) {
+          starting_lines_row[i]++;
+        }
+      } else if (starting_lines_row[i - 1] - starting_lines_row[i] == -1) {
+        if (rand() % 2 == 0 && (starting_lines_row[i] - lines_len[i]) > 0) {
+          starting_lines_row[i]--;
+        }
+      } else {
+        if (rand() % 2 == 0 && (starting_lines_row[i] - lines_len[i]) > 0) {
+          starting_lines_row[i]--;
+        } else if (starting_lines_row[i] < 12) {
+          starting_lines_row[i]++;
+        }
+      }
+    }
+
+    // Update lines length
+    if (rand() % 2 == 0 && lines_len[i] < 7) {
+      lines_len[i]++;
+    } else if (rand() % 2 == 1 && lines_len[i] > 5) {
+      lines_len[i]--;
+    }
+  }
 }
 
 void aurora() {
@@ -149,9 +239,7 @@ void aurora() {
 
   for (int i = 0; i < 20; i++) {
     y2 = rand() % 3;
-    bhm_gradient_line(x, y, x, y2, 12000, 20000);
-    bhm_line(x, y2, x, 0, background);
-    bhm_line(x, 12, x, y - 1, background);
+    bhm_gradient_line(x, y, x, y2, 12000, 37000);
     x++;
     if (rand() % 2 == 0 && y < yStart) {
       y++;
@@ -189,70 +277,7 @@ void rainbowStripes(int wait) {
   }
 }
 
-void usFlag() {
-  uint32_t color;
-  for(int row = 0; row < ROWS; row++) { 
-    for(int col = 0; col < COLS; col++) {
-      if (row < 7 && col < 10) {
-        if (col > 0 && col < 9 && row > 0 && row < 6 && ((row * 9 + col) % 2 == 0)) {
-          color = strip.Color(255, 255, 255);
-        } else {
-          color = strip.Color(59, 59, 111);
-        }
-      } else {
-        color = row % 2 == 0 ? strip.Color(180, 47, 53) : strip.Color(255, 255, 255);
-      }
-      strip.setPixelColor(cartesianToStrip(col, row), color);
-    }
-  }
-  strip.show();
-}
-
-void ukFlag() {
-  for(int i = 0; i < LED_COUNT; i++) {
-    strip.setPixelColor(i, blue);
-  }
-
-  bhm_line(1, 0, 26, 11, white);
-  bhm_line(0, 1, 25, 12, white);
-  
-  bhm_line(1, 12, 26, 1, white);
-  bhm_line(0, 11, 25, 0, white);
-  
-  bhm_line(12, 0, 12, 12, white);
-  bhm_line(14, 0, 14, 12, white);
-  
-  bhm_line(0, 5, 26, 5, white);
-  bhm_line(0, 7, 26, 7, white);
-  
-  bhm_line(0, 0, 26, 12, red);
-  bhm_line(0, 12, 26, 0, red);
-  bhm_line(13, 0, 13, 12, red);
-  bhm_line(0, 6, 26, 6, red);
-}
-
-void frFlag() {
-  for (int i = 0; i < COLS; i++) {
-    if (i < 9) {
-      bhm_line(i, 0, i, 12, blue);
-    } else if (i <= 18) {
-      bhm_line(i, 0, i, 12, white);
-    } else {
-      bhm_line(i, 0, i, 12, red);
-    }
-  }
-}
-
-void setupMatrix() {
-  for(int row = 0; row < ROWS; row++) {
-    for(int col = 0; col < COLS; col++) {
-      matrix[row][col] = (row % 2 == 0 ? strip.Color(255, 0, 0) : strip.Color(255, 255, 255));
-    }
-  }
-}
-
 int cartesianToStrip(int x, int y) {
-  // return (LED_COUNT - 1) - COLS * y + (y % 2 == 0 ? x : COLS - 1 - x);
   return (ROWS - 1 - y) * COLS + (y % 2 == 0 ? COLS - 1 - x : x); // inverted
 }
 
@@ -289,7 +314,7 @@ void bhm_line(int x1, int y1, int x2, int y2, uint32_t color) {
         px = px + 2 * (dy1 - dx1);
       }
       delay(0);
-      strip.setPixelColor(cartesianToStrip(x, y), color);;
+      strip.setPixelColor(cartesianToStrip(x, y), color);
     }
   } else {
     if (dy >= 0) {
@@ -321,7 +346,37 @@ void bhm_line(int x1, int y1, int x2, int y2, uint32_t color) {
   }
 }
 
+// RGB version
+// fast drawing where x1 == x2
+void bhm_gradient_line_rgb(int x1, int y1, int x2, int y2, int r1, int g1, int b1, int r2, int g2, int b2) {
+  int rx, gx, bx;
+  int yStart = min(y1, y2);
+  int yEnd = max(y1, y2);
+  
+  for (int i = yStart; i <= yEnd; i++) {
+    rx = r1 * ((i - yStart) / (yEnd - yStart)) + r2 * (1 - ((i - yStart) / (yEnd - yStart)));
+    gx = g1 * ((i - yStart) / (yEnd - yStart)) + g2 * (1 - ((i - yStart) / (yEnd - yStart)));
+    bx = b1 * ((i - yStart) / (yEnd - yStart)) + b2 * (1 - ((i - yStart) / (yEnd - yStart)));
+    strip.setPixelColor(cartesianToStrip(x1, i), strip.Color(rx, gx, bx));
+  }
+}
+
+// fast drawing where x1 == x2
 void bhm_gradient_line(int x1, int y1, int x2, int y2, long startHue, long endHue) {
+  long hue;
+  int gradStep;
+  int yStart = min(y1, y2);
+  int yEnd = max(y1, y2);
+  hue = startHue;
+  gradStep = gradientStep(startHue, endHue, yEnd - yStart + 1);
+  
+  for (int i = yStart; i <= yEnd; i++) {
+    strip.setPixelColor(cartesianToStrip(x1, i), strip.gamma32(strip.ColorHSV(hue)));
+    hue += gradStep;
+  }
+}
+
+void bhm_gradient_line_slow(int x1, int y1, int x2, int y2, long startHue, long endHue) {
   int x, y, dx, dy, dx1, dy1, px, py, xe, ye, i, gradStep;
   long hue;
   dx = x2 - x1;
@@ -401,16 +456,6 @@ long gradientStep(long startHue, long endHue, int len) {
   startHue = startHue % 65535;
   endHue = endHue % 65535;
 
-  Serial.print("(");
-  Serial.print(startHue);
-  Serial.print("/");
-  Serial.print(endHue);
-  Serial.print("/");
-  Serial.print(len);
-  Serial.print("=>");
-  Serial.print((endHue - startHue) / len);
-  Serial.print(")");
-
   return (endHue - startHue) / len;
 }
 
@@ -423,22 +468,6 @@ void renderMatrix() {
   }
   strip.show();
 }
-
-//void printMatrix()
-//{
-//    int i, j;
-//
-//    // Print elements of two dimensional array.
-//    for (i = 0; i < ROWS; i++)
-//    {
-//        for (j = 0; j < COLS; j++)
-//        {
-//            snprintf(buffer, sizeof(buffer), "%d ", matrix[i][j]);
-//            Serial.print(buffer);
-//        }
-//    }
-//    Serial.print("\n");
-//}
 
 // Fill strip pixels one after another with a color. Strip is NOT cleared
 // first; anything there will be covered pixel by pixel. Pass in color

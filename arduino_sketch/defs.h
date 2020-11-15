@@ -4,6 +4,13 @@ struct Point {
   int col;
 };
 
+typedef struct Line Line;
+struct Line {
+  int starting_row;
+  int starting_col;
+  int len;
+};
+
 typedef struct Color Color;
 struct Color {
   int hue; // Hue from 0 to 65535
