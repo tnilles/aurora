@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
 
 #include <Adafruit_NeoPixel.h>
 #ifdef __AVR__
@@ -52,12 +53,14 @@ uint32_t matrix[ROWS][COLS];
 int starting_lines_row[AURORA_LEN];
 int starting_lines_col[AURORA_LEN];
 int lines_len[AURORA_LEN];
+float modifiers[AURORA_LEN];
 
 void init_lines() {
   for (int i = 0; i < AURORA_LEN; i++) {
     starting_lines_row[i] = 10;
     starting_lines_col[i] = i + 3;
     lines_len[i] = rand() % 4 + 3;
+    modifiers[i] = 1.0;
   }
 }
 
@@ -91,7 +94,7 @@ uint32_t white2 = strip.Color(70, 70, 135);
 uint32_t background = strip.Color(1, 1, 19);
 
 void loop() {
-  //Serial.begin(9600); // Démarrage de la communication série  
+  Serial.begin(9600); // Démarrage de la communication série  
   //Serial.print("starting...");
 
 //  bhm_line(0, 0, 10, 0, red);
@@ -152,8 +155,12 @@ void aurora_loop() {
 }
 
 void clear_screen() {
-  for (int i = 0; i < LED_COUNT; i++) {
-    strip.setPixelColor(i, background);
+  //for (int i = 0; i < LED_COUNT; i++) {
+    //strip.setPixelColor(i, background);
+  //}
+
+  for (int col = 0; col < COLS; col++) {
+    bhm_gradient_line_rgb(col, 12, col, 0, 1, 1, 19, 0, 0, 4);
   }
 
   // Stars
@@ -172,13 +179,56 @@ void clear_screen() {
 }
 
 void render_lines() {
+  int r1, g1, b1, r2, g2, b2;
   for (int i = 0; i < AURORA_LEN; i++) {
-    bhm_gradient_line_rgb(starting_lines_col[i], starting_lines_row[i], starting_lines_col[i], starting_lines_row[i] - lines_len[i], 119, 0, 119, 115, 222, 86); //60300, 19300);
+    // Green 115, 222, 86
+    // Purple 119, 0, 255
+    // Red 232, 72, 142
+    // Blue 66, 148, 154
+
+    r1 = 115;
+    g1 = 222;
+    b1 = 86;
+    r2 = 119;
+    g2 = 0;
+    b2 = 255;
+
+    if (rand() % 2 == 0 && modifiers[i] < 1.5) {
+      modifiers[i] += 0.1;
+    } else if (rand() % 2 == 0 && modifiers[i] > 0.5) {
+      modifiers[i] -= 0.1;
+    }
+
+    r1 = (float)r1 * modifiers[i];
+    g1 = (float)g1 * modifiers[i];
+    b1 = (float)b1 * modifiers[i];
+    r2 = (float)r2 * modifiers[i];
+    g2 = (float)g2 * modifiers[i];
+    b2 = (float)b2 * modifiers[i];
+
+    if (r1 < 0) { r1 = 0; }
+    if (g1 < 0) { g1 = 0; }
+    if (b1 < 0) { b1 = 0; }
+    if (r2 < 0) { r2 = 0; }
+    if (g2 < 0) { g2 = 0; }
+    if (b2 < 0) { b2 = 0; }
+
+    if (r1 > 255) { r1 = 255; }
+    if (g1 > 255) { g1 = 255; }
+    if (b1 > 255) { b1 = 255; }
+    if (r2 > 255) { r2 = 255; }
+    if (g2 > 255) { g2 = 255; }
+    if (b2 > 255) { b2 = 255; }
+    
+    
+    bhm_gradient_line_rgb(starting_lines_col[i], starting_lines_row[i], starting_lines_col[i], starting_lines_row[i] - lines_len[i], r1, g1, b1, r2, g2, b2); //60300, 19300);
   }
+  Serial.print("---");
 }
 
 void update_lines() {
   int col_modifier = 0;
+  int random_chance = 2;
   
   // Update starting cols
   if (rand() % 2 == 0 && starting_lines_row[0] > 0) {
@@ -204,11 +254,11 @@ void update_lines() {
       } else if (starting_lines_row[i - 1] - starting_lines_row[i] < -1) {
         starting_lines_row[i]--;
       } else if (starting_lines_row[i - 1] - starting_lines_row[i] == 1) {
-        if (rand() % 2 == 0 && starting_lines_row[i] < 12) {
+        if (rand() % random_chance == 0 && starting_lines_row[i] < 12) {
           starting_lines_row[i]++;
         }
       } else if (starting_lines_row[i - 1] - starting_lines_row[i] == -1) {
-        if (rand() % 2 == 0 && (starting_lines_row[i] - lines_len[i]) > 0) {
+        if (rand() % random_chance == 0 && (starting_lines_row[i] - lines_len[i]) > 0) {
           starting_lines_row[i]--;
         }
       } else {
@@ -350,14 +400,16 @@ void bhm_line(int x1, int y1, int x2, int y2, uint32_t color) {
 // fast drawing where x1 == x2
 void bhm_gradient_line_rgb(int x1, int y1, int x2, int y2, int r1, int g1, int b1, int r2, int g2, int b2) {
   int rx, gx, bx;
-  int yStart = min(y1, y2);
-  int yEnd = max(y1, y2);
+  float yStart = (float) min(y1, y2);
+  float yEnd = (float) max(y1, y2);
+  float pct;
   
-  for (int i = yStart; i <= yEnd; i++) {
-    rx = r1 * ((i - yStart) / (yEnd - yStart)) + r2 * (1 - ((i - yStart) / (yEnd - yStart)));
-    gx = g1 * ((i - yStart) / (yEnd - yStart)) + g2 * (1 - ((i - yStart) / (yEnd - yStart)));
-    bx = b1 * ((i - yStart) / (yEnd - yStart)) + b2 * (1 - ((i - yStart) / (yEnd - yStart)));
-    strip.setPixelColor(cartesianToStrip(x1, i), strip.Color(rx, gx, bx));
+  for (float i = yStart; i <= yEnd; i++) {
+    pct = (i - yStart) / (yEnd - yStart);
+    rx = (float)r1 * ((i - yStart) / (yEnd - yStart)) + (float)r2 * (1 - ((i - yStart) / (yEnd - yStart)));
+    gx = (float)g1 * ((i - yStart) / (yEnd - yStart)) + (float)g2 * (1 - ((i - yStart) / (yEnd - yStart)));
+    bx = (float)b1 * ((i - yStart) / (yEnd - yStart)) + (float)b2 * (1 - ((i - yStart) / (yEnd - yStart)));
+    strip.setPixelColor(cartesianToStrip(x1, i), strip.Color((int)rx, (int)gx, (int)bx));
   }
 }
 

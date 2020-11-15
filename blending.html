@@ -1,0 +1,57 @@
+<html>
+  <head>
+    <style>
+      body {
+        display: flex;
+        flex-direction: column;
+      }
+
+      #swatches, #swatches2 {
+        text-align: center;
+      }
+
+      #swatches div, #swatches2 div {
+        width: 100px;
+        height: 100px;
+        display: inline-block;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="swatches"></div>
+    <div id="swatches2"></div>
+
+    <script>
+      let swatches = document.getElementById('swatches')
+      let swatches2 = document.getElementById('swatches2')
+
+      let green = [115, 222, 86]
+      let purple = [119, 0, 255]
+
+      const toRgb = (color) => `rgb(${color[0]}, ${color[1]}, ${color[2]})`
+      
+      const YSTART = 0
+      const YEND = 15
+
+      for (let i = YSTART; i <= YEND; i++) {
+        let div = document.createElement('div')
+        let rx = green[0] * ((i - YSTART) / (YEND - YSTART)) + purple[0] * (1 - ((i - YSTART) / (YEND - YSTART)))
+        let gx = green[1] * ((i - YSTART) / (YEND - YSTART)) + purple[1] * (1 - ((i - YSTART) / (YEND - YSTART)))
+        let bx = green[2] * ((i - YSTART) / (YEND - YSTART)) + purple[2] * (1 - ((i - YSTART) / (YEND - YSTART)))
+
+        div.style.background = toRgb([rx, gx, bx])
+        swatches.appendChild(div)
+      }
+
+      for (let i = 0; i < LEN; i++) {
+        let div = document.createElement('div')
+        let rx = purple[0] * (i / LEN) + green[0] * (1 - (i / LEN))
+        let gx = purple[1] * (i / LEN) + green[1] * (1 - (i / LEN))
+        let bx = purple[2] * (i / LEN) + green[2] * (1 - (i / LEN))
+
+        div.style.background = toRgb([rx, gx, bx])
+        swatches2.appendChild(div)
+      }
+    </script>
+  </body>
+</html>
