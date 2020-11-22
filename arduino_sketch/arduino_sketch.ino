@@ -115,54 +115,57 @@ void render_line_at(int row_start_decimal, int col) {
       px_color = strip.Color(line[i].r, line[i].g, line[i].b);
     } else if (i == 0) {
       px_color = strip.Color(
-        (float)line[i].r * (float)(1 - shift),
-        (float)line[i].g * (float)(1 - shift),
-        (float)line[i].b * (float)(1 - shift)
+        (float)line[i].r * (float)shift,
+        (float)line[i].g * (float)shift,
+        (float)line[i].b * (float)shift
       );
-
-      Serial.print("\n");
-      Serial.print("i==0 rgb(");
-      Serial.print((float)line[i].r * (float)(1 - shift));
-      Serial.print(", ");
-      Serial.print((float)line[i].g * (float)(1 - shift));
-      Serial.print(", ");
-      Serial.print((float)line[i].b * (float)(1 - shift));
-      Serial.print(")");
     } else if (i == LINE_LEN) {
-      px_color = strip.Color(
-        (float)line[i - 1].r * shift,
-        (float)line[i - 1].g * shift,
-        (float)line[i - 1].b * shift
-      );
-
       Serial.print("\n");
-      Serial.print("i==LINE_LEN rgb(");
-      Serial.print((float)line[i - 1].r * shift);
+      Serial.print("END rgb(");
+      Serial.print((float)line[i - 1].r * (1 - shift));
       Serial.print(", ");
-      Serial.print((float)line[i - 1].g * shift);
+      Serial.print((float)line[i - 1].g * (1 - shift));
       Serial.print(", ");
-      Serial.print((float)line[i - 1].b * shift);
+      Serial.print((float)line[i - 1].b * (1 - shift));
       Serial.print(")");
-    } else if (i == LINE_LEN - 1) {
       px_color = strip.Color(
-        (float)line[i].r * (float)(1 - shift),
-        (float)line[i].g * (float)(1 - shift),
-        (float)line[i].b * (float)(1 - shift)
+        (float)line[i - 1].r * (1 - shift),
+        (float)line[i - 1].g * (1 - shift),
+        (float)line[i - 1].b * (1 - shift)
+      );
+    } else if (i == LINE_LEN - 1) {
+      Serial.print("\n");
+      Serial.print("END-1 rgb(");
+      Serial.print((float)line[i].r * (float)shift);
+      Serial.print(", ");
+      Serial.print((float)line[i].g * (float)shift);
+      Serial.print(", ");
+      Serial.print((float)line[i].b * (float)shift);
+      Serial.print(")");
+      px_color = strip.Color(
+        (float)line[i].r * (float)shift,
+        (float)line[i].g * (float)shift,
+        (float)line[i].b * (float)shift
+      );
+      //px_color = strip.Color(255, 0, 0);
+      px_color = strip.Color(
+        (float)line[i].r * shift + (float)line[i - 1].r * (1 - shift),
+        (float)line[i].g * shift + (float)line[i - 1].g * (1 - shift),
+        (float)line[i].b * shift + (float)line[i - 1].b * (1 - shift)
       );
     } else {
       Serial.print("\n");
       Serial.print("ELSE rgb(");
-      Serial.print((float)line[i].r * (1 - shift) + (float)line[i + 1].r * shift);
+      Serial.print((float)line[i].r * shift + (float)line[i + 1].r * (1 - shift));
       Serial.print(", ");
-      Serial.print((float)line[i].g * (1 - shift) + (float)line[i + 1].g * shift);
+      Serial.print((float)line[i].g * shift + (float)line[i + 1].g * (1 - shift));
       Serial.print(", ");
-      Serial.print((float)line[i].b * (1 - shift) + (float)line[i + 1].b * shift);
+      Serial.print((float)line[i].b * shift + (float)line[i + 1].b * (1 - shift));
       Serial.print(")");
-
       px_color = strip.Color(
-        (float)line[i].r * (1 - shift) + (float)line[i + 1].r * shift,
-        (float)line[i].g * (1 - shift) + (float)line[i + 1].g * shift,
-        (float)line[i].b * (1 - shift) + (float)line[i + 1].b * shift
+        (float)line[i].r * shift + (float)line[i + 1].r * (1 - shift),
+        (float)line[i].g * shift + (float)line[i + 1].g * (1 - shift),
+        (float)line[i].b * shift + (float)line[i + 1].b * (1 - shift)
       );
     }
 
@@ -175,9 +178,19 @@ void loop() {
   //Serial.print("starting...");
 
   init_line();
+  /*
   render_line_at(90, 12);
   render_line_at(95, 15);
   render_line_at(100, 18);
+  */
+
+  for (int i = 0; i <= 5; i++) {
+    render_line_at(90 + (i * 2), 3 + i);
+  }
+
+  for (int i = 0; i <= 10; i++) {
+    render_line_at(90 + i, 12 + i);
+  }
   strip.show();
   while(true) {}
 
