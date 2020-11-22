@@ -33,10 +33,11 @@ int starting_lines_row[AURORA_LEN];
 int starting_lines_col[AURORA_LEN];
 int lines_len[AURORA_LEN];
 float modifiers[AURORA_LEN];
+int current_direction[AURORA_LEN];
 
 void init_lines() {
   for (int i = 0; i < AURORA_LEN; i++) {
-    starting_lines_row[i] = 10;
+    starting_lines_row[i] = 10 * 10;
     starting_lines_col[i] = i + 3;
     lines_len[i] = 7; //rand() % 4 + 3;
     modifiers[i] = 1.0;
@@ -56,6 +57,7 @@ void setup() {
   strip.setBrightness(50); // Set BRIGHTNESS to about 1/5 (max = 255)
 
   init_lines();
+  init_line();
 
   srand(time(NULL));
 }
@@ -65,13 +67,13 @@ void setup() {
 
 uint32_t blue = strip.Color(59, 59, 111);
 uint32_t red = strip.Color(180, 47, 53);
-uint32_t white = strip.Color(50, 50, 95);
-uint32_t white2 = strip.Color(70, 70, 135);
+uint32_t white = strip.Color(30, 30, 65);
+uint32_t white2 = strip.Color(40, 40, 75);
 // uint32_t background = strip.Color(40, 10, 93);
 uint32_t background = strip.Color(1, 1, 19);
 
-Rgb color_start = {115, 222, 86};
-Rgb color_end = {119, 0, 255};
+Rgb color_end = {115, 222, 86};
+Rgb color_start = {119, 0, 255};
 
 int r1 = 115;
 int g1 = 222;
@@ -107,9 +109,6 @@ void render_line_at(int row_start_decimal, int col) {
     additional_px = 1;
   }
 
-  Serial.print("\n\nadditional px? ");
-  Serial.print(additional_px);
-
   for (int i = 0; i < (LINE_LEN + additional_px); i++) {
     if (shift == 0.0) {
       px_color = strip.Color(line[i].r, line[i].g, line[i].b);
@@ -120,48 +119,18 @@ void render_line_at(int row_start_decimal, int col) {
         (float)line[i].b * (float)shift
       );
     } else if (i == LINE_LEN) {
-      Serial.print("\n");
-      Serial.print("END rgb(");
-      Serial.print((float)line[i - 1].r * (1 - shift));
-      Serial.print(", ");
-      Serial.print((float)line[i - 1].g * (1 - shift));
-      Serial.print(", ");
-      Serial.print((float)line[i - 1].b * (1 - shift));
-      Serial.print(")");
       px_color = strip.Color(
         (float)line[i - 1].r * (1 - shift),
         (float)line[i - 1].g * (1 - shift),
         (float)line[i - 1].b * (1 - shift)
       );
     } else if (i == LINE_LEN - 1) {
-      Serial.print("\n");
-      Serial.print("END-1 rgb(");
-      Serial.print((float)line[i].r * (float)shift);
-      Serial.print(", ");
-      Serial.print((float)line[i].g * (float)shift);
-      Serial.print(", ");
-      Serial.print((float)line[i].b * (float)shift);
-      Serial.print(")");
-      px_color = strip.Color(
-        (float)line[i].r * (float)shift,
-        (float)line[i].g * (float)shift,
-        (float)line[i].b * (float)shift
-      );
-      //px_color = strip.Color(255, 0, 0);
       px_color = strip.Color(
         (float)line[i].r * shift + (float)line[i - 1].r * (1 - shift),
         (float)line[i].g * shift + (float)line[i - 1].g * (1 - shift),
         (float)line[i].b * shift + (float)line[i - 1].b * (1 - shift)
       );
     } else {
-      Serial.print("\n");
-      Serial.print("ELSE rgb(");
-      Serial.print((float)line[i].r * shift + (float)line[i + 1].r * (1 - shift));
-      Serial.print(", ");
-      Serial.print((float)line[i].g * shift + (float)line[i + 1].g * (1 - shift));
-      Serial.print(", ");
-      Serial.print((float)line[i].b * shift + (float)line[i + 1].b * (1 - shift));
-      Serial.print(")");
       px_color = strip.Color(
         (float)line[i].r * shift + (float)line[i + 1].r * (1 - shift),
         (float)line[i].g * shift + (float)line[i + 1].g * (1 - shift),
@@ -169,49 +138,39 @@ void render_line_at(int row_start_decimal, int col) {
       );
     }
 
-    strip.setPixelColor(cartesianToStrip(col, row_start - i), px_color);
+    if (col >= 0 && col <= 26 && row_start - i >= 0 && row_start - i <= 12) {
+      strip.setPixelColor(cartesianToStrip(col, row_start - i), px_color);
+    }
   }
 }
 
 void loop() {
-  Serial.begin(9600); // Démarrage de la communication série  
+  //Serial.begin(9600); // Démarrage de la communication série  
   //Serial.print("starting...");
-
-  init_line();
   /*
   render_line_at(90, 12);
   render_line_at(95, 15);
   render_line_at(100, 18);
-  */
+  
 
   for (int i = 0; i <= 5; i++) {
     render_line_at(90 + (i * 2), 3 + i);
+  }
+
+  for (int i = 0; i <= 3; i++) {
+    render_line_at(100 - (i * 2.5), 9 + i);
   }
 
   for (int i = 0; i <= 10; i++) {
     render_line_at(90 + i, 12 + i);
   }
   strip.show();
-  while(true) {}
-
-  Serial.print("line: ");
-  for (int i = 0; i < LINE_LEN; i++) {
-    Serial.print("\n");
-    Serial.print("rgb(");
-    Serial.print(line[i].r);
-    Serial.print(", ");
-    Serial.print(line[i].g);
-    Serial.print(", ");
-    Serial.print(line[i].b);
-    Serial.print(")");
-  }
-
-  while(true) {}
+  */
 
   //return;
-  for (int i = 0; i < 27 + 13; i++) {
+  //for (int i = 0; i < 27 + 13; i++) {
     //bhm_gradient_line(0, i, i, 0, 0, 65534);
-  }
+  //}
 
   aurora_loop();
 
@@ -222,7 +181,6 @@ void loop() {
 // Some functions of our own for creating animated effects -----------------
 
 int cycle = 0;
-int current_direction = 0;
 Rgb a, b, y, z; // a & b: two top pixels, y & z: two down pixels
 
 void aurora_loop() {
@@ -248,42 +206,39 @@ void clear_screen() {
     bhm_gradient_line_rgb(col, 12, col, 0, 1, 1, 19, 0, 0, 4);
   }
 
+  //return;
+
   // Stars
-  strip.setPixelColor(cartesianToStrip(3, 1), (rand() % 2 == 0) ? white : white2);
-  strip.setPixelColor(cartesianToStrip(2, 11), (rand() % 2 == 0) ? white : white2);
-  strip.setPixelColor(cartesianToStrip(6, 10), (rand() % 2 == 0) ? white : white2);
-  strip.setPixelColor(cartesianToStrip(7, 12), (rand() % 2 == 0) ? white : white2);
-  strip.setPixelColor(cartesianToStrip(11, 11), (rand() % 2 == 0) ? white : white2);
-  strip.setPixelColor(cartesianToStrip(17, 9), (rand() % 2 == 0) ? white : white2);
-  strip.setPixelColor(cartesianToStrip(23, 12), (rand() % 2 == 0) ? white : white2);
-  strip.setPixelColor(cartesianToStrip(26, 8), (rand() % 2 == 0) ? white : white2);
-  strip.setPixelColor(cartesianToStrip(25, 3), (rand() % 2 == 0) ? white : white2);
-  strip.setPixelColor(cartesianToStrip(7, 6), (rand() % 2 == 0) ? white : white2);
-  strip.setPixelColor(cartesianToStrip(21, 4), (rand() % 2 == 0) ? white : white2);
-  strip.setPixelColor(cartesianToStrip(15, 2), (rand() % 2 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(3, 1), (rand() % 10 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(2, 11), (rand() % 10 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(6, 10), (rand() % 10 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(7, 12), (rand() % 10 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(11, 11), (rand() % 10 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(17, 9), (rand() % 10 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(23, 12), (rand() % 10 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(26, 8), (rand() % 10 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(25, 3), (rand() % 10 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(7, 6), (rand() % 10 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(21, 4), (rand() % 10 == 0) ? white : white2);
+  strip.setPixelColor(cartesianToStrip(15, 2), (rand() % 10 == 0) ? white : white2);
 }
 
 void render_lines() {
-  for (int i = 0; i < 1; i++) {
+  for (int i = 0; i < AURORA_LEN; i++) {
     // Green 115, 222, 86
     // Purple 119, 0, 255
     // Red 232, 72, 142
     // Blue 66, 148, 154
 
-    r1 = 115;
-    g1 = 222;
-    b1 = 86;
-    r2 = 119;
-    g2 = 0;
-    b2 = 255;
+    // r1 = 115;
+    // g1 = 222;
+    // b1 = 86;
+    // r2 = 119;
+    // g2 = 0;
+    // b2 = 255;
 
+    render_line_at(starting_lines_row[i], starting_lines_col[i]);
 
-    bhm_gradient_line_rgb(
-      starting_lines_col[i], starting_lines_row[i], 
-      starting_lines_col[i], starting_lines_row[i] - lines_len[i], 
-      r1, g1, b1,
-      r2, g2, b2
-    );
  /*   
     bhm_gradient_line_rgb(
       starting_lines_col[i], starting_lines_row[i], 
@@ -293,7 +248,6 @@ void render_lines() {
     ); //60300, 19300);
     */
   }
-  Serial.print("---");
 }
 
 void update_lines() {
@@ -301,71 +255,46 @@ void update_lines() {
   
   for (int i = 0; i < AURORA_LEN; i++) {
     // Update starting rows
-    if (cycle >= 0) {
+    if (cycle == 0) {
       // Update starting lines row – begginning of a new cycle
-      
 
       // Update current direction
+      
       if (i == 0) {
         if (rand() % 2 == 0 && starting_lines_row[i] > 0) {
-          current_direction = -1;
-        } else if(starting_lines_row[i] < 12) {
-          current_direction = 1;
+          current_direction[i] = -1;
+        } else if(starting_lines_row[i] < 12 * 10) {
+          current_direction[i] = 1;
         } else {
-          current_direction = 0;
+          current_direction[i] = 0;
         }
       } else {
-        if (starting_lines_row[i - 1] - starting_lines_row[i] > 1) {
-          current_direction = 1;
-        } else if (starting_lines_row[i - 1] - starting_lines_row[i] < -1) {
-          current_direction = -1;
-        } else if (starting_lines_row[i - 1] - starting_lines_row[i] == 1) {
-          if (rand() % random_chance == 0 && starting_lines_row[i] < 12) {
-            current_direction = 1;
+        if (starting_lines_row[i - 1] - starting_lines_row[i] > 1 * 10) {
+          current_direction[i] = 1;
+        } else if (starting_lines_row[i - 1] - starting_lines_row[i] < -1 * 10) {
+          current_direction[i] = -1;
+        } else if (starting_lines_row[i - 1] - starting_lines_row[i] == 1 * 10) {
+          if (rand() % random_chance == 0 && starting_lines_row[i] < 12 * 10) {
+            current_direction[i] = 1;
           } else {
-            current_direction = 0;
+            current_direction[i] = 0;
           }
-        } else if (starting_lines_row[i - 1] - starting_lines_row[i] == -1) {
+        } else if (starting_lines_row[i - 1] - starting_lines_row[i] == -1 * 10) {
           if (rand() % random_chance == 0 && (starting_lines_row[i] - lines_len[i]) > 0) {
-            current_direction = -1;
+            current_direction[i] = -1;
           } else {
-            current_direction = 0;
+            current_direction[i] = 0;
           }
         } else {
           if (rand() % 2 == 0 && (starting_lines_row[i] - lines_len[i]) > 0) {
-            current_direction = -1;
-          } else if (starting_lines_row[i] < 12) {
-            current_direction = 1;
+            current_direction[i] = -1;
+          } else if (starting_lines_row[i] < 12 * 10) {
+            current_direction[i] = 1;
           } else {
-            current_direction = 1;
+            current_direction[i] = 1;
           }
         }
       }
-
-      if (current_direction == -1) {
-        starting_lines_row[i]--;
-      } else if (current_direction == 1) {
-        starting_lines_row[i]++;
-      }
-
-      // Compute a, b, y, z
-      a.r = r2;
-      a.g = g2;
-      a.b = b2;
-
-      int pct_b =  1 / lines_len[i];
-      b.r = r1 * pct_b + r2 * (1 - pct_b);
-      b.g = g1 * pct_b + g2 * (1 - pct_b);
-      b.b = b1 * pct_b + b2 * (1 - pct_b);
-
-      int pct_y = (lines_len[i] - 1) / lines_len[i];
-      y.r = r1 * pct_y + r2 * (1 - pct_y);
-      y.g = g1 * pct_y + g2 * (1 - pct_y);
-      y.b = b1 * pct_y + b2 * (1 - pct_y);
-
-      z.r = r1;
-      z.g = g1;
-      z.b = b1;
 
       // Update lines length
       /*
@@ -374,6 +303,12 @@ void update_lines() {
       } else if (rand() % 2 == 1 && lines_len[i] > 5) {
         lines_len[i]--;
       }*/
+    }
+   
+    if (current_direction[i] == -1) {
+      starting_lines_row[i]--;
+    } else if (current_direction[i] == 1) {
+      starting_lines_row[i]++;
     }
   }
 }
