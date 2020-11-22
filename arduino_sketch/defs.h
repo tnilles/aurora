@@ -17,3 +17,10 @@ struct Color {
   int sat; // Saturation from 0 to 255
   int val; // Brightness from 0 to 255
 };
+
+typedef struct Rgb Rgb;
+struct Rgb {
+  int r;
+  int g;
+  int b;
+};
