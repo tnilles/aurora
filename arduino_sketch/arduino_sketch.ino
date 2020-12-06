@@ -72,8 +72,13 @@ uint32_t white2 = strip.Color(40, 40, 75);
 // uint32_t background = strip.Color(40, 10, 93);
 uint32_t background = strip.Color(1, 1, 19);
 
-Rgb color_end = {115, 222, 86};
-Rgb color_start = {119, 0, 255};
+// Rgb color_end = {115, 222, 86};
+// Rgb color_start = {119, 0, 255};
+
+// Rgb color_start = {6, 28, 1};
+
+Rgb color_end = {255, 0, 0};
+Rgb color_start = {0, 0, 255};
 
 int r1 = 115;
 int g1 = 222;
@@ -82,7 +87,7 @@ int r2 = 119;
 int g2 = 0;
 int b2 = 255;
 
-#define LINE_LEN 7
+#define LINE_LEN 10 // MAX
 Rgb line[LINE_LEN];
 
 void init_line() {
@@ -98,43 +103,76 @@ void init_line() {
 }
 
 // Row start decimal is the row start * 10
-void render_line_at(int row_start_decimal, int col) {
+void render_line_at(int row_start_decimal, int col, int len) {
+  float pct, rx, gx, bx;
+  Rgb _color_start, _color_end;
+
   int row_start = ceil((float)row_start_decimal / 10.0);
   int additional_px = 0;
-  float shift = (row_start_decimal % 10) / 10.0; // eg. row_start_decimal = 92, shift = 0.2
+  float shift = (float)(row_start_decimal % 10) / 10.0; // eg. row_start_decimal = 92, shift = 0.2
   uint32_t px_color;
+
+  float coef = 1;// (float)(1.0 - ((float)1.0 / (float)(len - 1)));
+
+  /*if (shift == 0) {
+    _color_start = {(int)(color_start.r * coef) + (int)(color_end.r * (1 - coef)), (int)(color_start.g * coef) + (int)(color_end.g * (1 - coef)), (int)(color_start.b * coef) + (int)(color_end.b * (1 - coef))};
+    _color_end = {(int)(color_end.r * coef) + (int)(color_start.r * (1 - coef)), (int)(color_end.g * coef) + (int)(color_start.g * (1 - coef)), (int)(color_end.b * coef) + (int)(color_start.b * (1 - coef))};
+  } else {*/
+    _color_start = color_start;
+    _color_end = color_end;
+  //}
+
+  for (int i = 0; i < len; i++) {
+    pct = (float)i / (float)(len - 1);
+    rx = (float)_color_start.r * pct + (float)_color_end.r * (1 - pct);
+    gx = (float)_color_start.g * pct + (float)_color_end.g * (1 - pct);
+    bx = (float)_color_start.b * pct + (float)_color_end.b * (1 - pct);
+    line[i] = {(int)rx, (int)gx, (int)bx};
+  }
 
   // If we don't align perfectly on the pixel grid…
   if (row_start_decimal % 10 != 0) {
     additional_px = 1;
   }
 
-  for (int i = 0; i < (LINE_LEN + additional_px); i++) {
+  for (int i = 0; i < (len + additional_px); i++) {
     if (shift == 0.0) {
-      px_color = strip.Color(line[i].r, line[i].g, line[i].b);
+      if (i == 0 || i == (len + additional_px) - 1) {
+        px_color = strip.Color(line[i].r, line[i].g, line[i].b);
+      } else {
+        coef = 0.9;
+        px_color = strip.Color(
+          (float)line[i].r * (1 - coef) + (float)line[i + 1].r * coef,
+          (float)line[i].g * (1 - coef) + (float)line[i + 1].g * coef,
+          (float)line[i].b * (1 - coef) + (float)line[i + 1].b * coef
+        );
+      }
     } else if (i == 0) {
       px_color = strip.Color(
         (float)line[i].r * (float)shift,
         (float)line[i].g * (float)shift,
         (float)line[i].b * (float)shift
       );
-    } else if (i == LINE_LEN) {
+      //px_color = strip.Color(0, 0, 0);
+    } else if (i == len) {
       px_color = strip.Color(
         (float)line[i - 1].r * (1 - shift),
         (float)line[i - 1].g * (1 - shift),
         (float)line[i - 1].b * (1 - shift)
       );
-    } else if (i == LINE_LEN - 1) {
+      //px_color = strip.Color(0, 0, 0);
+    } else if (i == len - 1) {
       px_color = strip.Color(
         (float)line[i].r * shift + (float)line[i - 1].r * (1 - shift),
         (float)line[i].g * shift + (float)line[i - 1].g * (1 - shift),
         (float)line[i].b * shift + (float)line[i - 1].b * (1 - shift)
       );
+      //px_color = strip.Color(0, 0, 0);
     } else {
       px_color = strip.Color(
-        (float)line[i].r * shift + (float)line[i + 1].r * (1 - shift),
-        (float)line[i].g * shift + (float)line[i + 1].g * (1 - shift),
-        (float)line[i].b * shift + (float)line[i + 1].b * (1 - shift)
+        (float)line[i].r * (1 - shift) + (float)line[i + 1].r * shift,
+        (float)line[i].g * (1 - shift) + (float)line[i + 1].g * shift,
+        (float)line[i].b * (1 - shift) + (float)line[i + 1].b * shift
       );
     }
 
@@ -147,25 +185,19 @@ void render_line_at(int row_start_decimal, int col) {
 void loop() {
   //Serial.begin(9600); // Démarrage de la communication série  
   //Serial.print("starting...");
-  /*
-  render_line_at(90, 12);
-  render_line_at(95, 15);
-  render_line_at(100, 18);
   
 
-  for (int i = 0; i <= 5; i++) {
-    render_line_at(90 + (i * 2), 3 + i);
+  for (int i = 0; i <= 26; i++) {
+    //render_line_at(70 + i, i, 7);
   }
 
-  for (int i = 0; i <= 3; i++) {
-    render_line_at(100 - (i * 2.5), 9 + i);
-  }
-
-  for (int i = 0; i <= 10; i++) {
-    render_line_at(90 + i, 12 + i);
-  }
+  /*render_line_at(80, 7, 7);
+  render_line_at(81, 11, 7);
+  render_line_at(85, 15, 7);
+  render_line_at(89, 19, 7);
+  render_line_at(90, 23, 7);
   strip.show();
-  */
+  while(true) {}*/
 
   //return;
   //for (int i = 0; i < 27 + 13; i++) {
@@ -230,23 +262,7 @@ void render_lines() {
     // Red 232, 72, 142
     // Blue 66, 148, 154
 
-    // r1 = 115;
-    // g1 = 222;
-    // b1 = 86;
-    // r2 = 119;
-    // g2 = 0;
-    // b2 = 255;
-
-    render_line_at(starting_lines_row[i], starting_lines_col[i]);
-
- /*   
-    bhm_gradient_line_rgb(
-      starting_lines_col[i], starting_lines_row[i], 
-      starting_lines_col[i], starting_lines_row[i] - lines_len[i], 
-      r1, g1, b1,
-      r2, g2, b2
-    ); //60300, 19300);
-    */
+    render_line_at(starting_lines_row[i], starting_lines_col[i], lines_len[i]);
   }
 }
 
@@ -255,13 +271,13 @@ void update_lines() {
   
   for (int i = 0; i < AURORA_LEN; i++) {
     // Update starting rows
-    if (cycle == 0) {
+    if (cycle == 0 || cycle == 5) {
       // Update starting lines row – begginning of a new cycle
 
       // Update current direction
       
       if (i == 0) {
-        if (rand() % 2 == 0 && starting_lines_row[i] > 0) {
+        if (rand() % 2 == 0 && starting_lines_row[i] > 7 * 10) {
           current_direction[i] = -1;
         } else if(starting_lines_row[i] < 12 * 10) {
           current_direction[i] = 1;
@@ -269,9 +285,9 @@ void update_lines() {
           current_direction[i] = 0;
         }
       } else {
-        if (starting_lines_row[i - 1] - starting_lines_row[i] > 1 * 10) {
+        if (starting_lines_row[i - 1] - starting_lines_row[i] > 1 * 5) {
           current_direction[i] = 1;
-        } else if (starting_lines_row[i - 1] - starting_lines_row[i] < -1 * 10) {
+        } else if (starting_lines_row[i - 1] - starting_lines_row[i] < -1 * 5) {
           current_direction[i] = -1;
         } else if (starting_lines_row[i - 1] - starting_lines_row[i] == 1 * 10) {
           if (rand() % random_chance == 0 && starting_lines_row[i] < 12 * 10) {
@@ -280,13 +296,13 @@ void update_lines() {
             current_direction[i] = 0;
           }
         } else if (starting_lines_row[i - 1] - starting_lines_row[i] == -1 * 10) {
-          if (rand() % random_chance == 0 && (starting_lines_row[i] - lines_len[i]) > 0) {
+          if (rand() % random_chance == 0 && (starting_lines_row[i] - lines_len[i]) > 7 * 10) {
             current_direction[i] = -1;
           } else {
             current_direction[i] = 0;
           }
         } else {
-          if (rand() % 2 == 0 && (starting_lines_row[i] - lines_len[i]) > 0) {
+          if (rand() % 2 == 0 && (starting_lines_row[i] - lines_len[i]) > 7 * 10) {
             current_direction[i] = -1;
           } else if (starting_lines_row[i] < 12 * 10) {
             current_direction[i] = 1;
@@ -297,12 +313,11 @@ void update_lines() {
       }
 
       // Update lines length
-      /*
       if (rand() % 2 == 0 && lines_len[i] < 7) {
-        lines_len[i]++;
+        //lines_len[i]++;
       } else if (rand() % 2 == 1 && lines_len[i] > 5) {
-        lines_len[i]--;
-      }*/
+        //lines_len[i]--;
+      }
     }
    
     if (current_direction[i] == -1) {
