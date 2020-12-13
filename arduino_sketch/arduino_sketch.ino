@@ -9,13 +9,15 @@
  #include <avr/power.h> // Required for 16 MHz Adafruit Trinket
 #endif
 #include "defs.h"
+#include <arduino-timer.h>
 
 #define LED_PIN    6
 #define ROWS      13
 #define COLS      27
 #define LED_COUNT COLS * ROWS
-#define AURORA_LEN 20
+#define AURORA_LEN 14 // 20 for ONE AURORA
 
+auto timer = timer_create_default();
 
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 // Argument 3 = Pixel type flags, add together as needed:
@@ -32,16 +34,123 @@ uint32_t matrix[ROWS][COLS];
 int starting_lines_row[AURORA_LEN];
 int starting_lines_col[AURORA_LEN];
 int lines_len[AURORA_LEN];
-float modifiers[AURORA_LEN];
 int current_direction[AURORA_LEN];
+
+int starting_lines_row2[AURORA_LEN];
+int starting_lines_col2[AURORA_LEN];
+int lines_len2[AURORA_LEN];
+int current_direction2[AURORA_LEN];
+
+Rgb color_end = {115, 222, 86};
+Rgb color_start = {119, 0, 255};
+// Rgb color_start = {6, 28, 1};
+//Rgb color_end = {255, 0, 0};
+//Rgb color_start = {0, 0, 255};
+
+float modifiers[AURORA_LEN];
+
+uint32_t white = strip.Color(30, 30, 65);
+uint32_t white2 = strip.Color(40, 40, 75);
+uint32_t background = strip.Color(1, 1, 19);
+
+#define LINE_LEN 10 // Max possible line length
+Rgb line[LINE_LEN];
+
+int cycle = 0;
+
+float toggle_aurora_pct = 0;
+Rgb color_src_start;
+Rgb color_src_end;
+Rgb color_background = {1, 1, 19};
+Rgb original_color_end = {115, 222, 86};
+Rgb original_color_start = {119, 0, 255};
+bool visible_aurora = true;
+
 
 void init_lines() {
   for (int i = 0; i < AURORA_LEN; i++) {
-    starting_lines_row[i] = 10 * 10;
+    starting_lines_row[i] = 12 * 10;
+    starting_lines_col[i] = i + 2;
+    lines_len[i] = 4;
+
+    starting_lines_row2[i] = 6 * 10;
+    starting_lines_col2[i] = i + 12;
+    lines_len2[i] = 4;
+
+
+    // One aurora
+    /*starting_lines_row[i] = 10 * 10;
     starting_lines_col[i] = i + 3;
-    lines_len[i] = 7; //rand() % 4 + 3;
+    lines_len[i] = 4; //rand() % 4 + 3;*/
     modifiers[i] = 1.0;
   }
+}
+
+int lerp(int src, int dest, float pct) {
+  return src * (1 - pct) + dest * pct; 
+}
+
+bool update_toggle_aurora_pct(void *) {
+  toggle_aurora_pct += 0.01;
+  if (visible_aurora == true) {
+    // Note: store base colors somewhere
+    color_start = {
+      lerp(color_src_start.r, original_color_start.r, toggle_aurora_pct),
+      lerp(color_src_start.g, original_color_start.g, toggle_aurora_pct),
+      lerp(color_src_start.b, original_color_start.b, toggle_aurora_pct)
+    };
+
+    color_end = {
+      lerp(color_src_end.r, original_color_end.r, toggle_aurora_pct),
+      lerp(color_src_end.g, original_color_end.g, toggle_aurora_pct),
+      lerp(color_src_end.b, original_color_end.b, toggle_aurora_pct)
+    };
+  } else {
+    color_start = {
+      lerp(color_src_start.r, color_background.r, toggle_aurora_pct),
+      lerp(color_src_start.g, color_background.g, toggle_aurora_pct),
+      lerp(color_src_start.b, color_background.b, toggle_aurora_pct)
+    };
+
+    color_end = {
+      lerp(color_src_end.r, color_background.r, toggle_aurora_pct),
+      lerp(color_src_end.g, color_background.g, toggle_aurora_pct),
+      lerp(color_src_end.b, color_background.b, toggle_aurora_pct)
+    };
+  }
+
+  return (toggle_aurora_pct >= 0.99) ? false : true;
+}
+
+
+
+bool toggle_aurora(void *) {
+  Serial.print("toggling aurora... \n");
+  toggle_aurora_pct = 0;
+  color_src_start.r = color_start.r;
+  color_src_start.g = color_start.g;
+  color_src_start.b = color_start.b;
+
+  color_src_end.r = color_end.r;
+  color_src_end.g = color_end.g;
+  color_src_end.b = color_end.b;
+
+  visible_aurora = !visible_aurora;
+
+  /*
+  if (color_start.r == 0 && color_start.g == 0 && color_start.b == 0 &&
+      color_end.r == 0 && color_end.g == 0 && color_end.b == 0) {
+    color_end = {115, 222, 86};
+    color_start = {119, 0, 255};
+  } else {
+    color_start = {1, 1, 19};
+    color_end = {1, 1, 19};
+  }
+  */
+
+  timer.every(100, update_toggle_aurora_pct);
+
+  return true; // keep timer active
 }
 
 void setup() {
@@ -57,55 +166,18 @@ void setup() {
   strip.setBrightness(50); // Set BRIGHTNESS to about 1/5 (max = 255)
 
   init_lines();
-  init_line();
 
   srand(time(NULL));
+
+  timer.every(20000, toggle_aurora);
 }
 
 
 // loop() function -- runs repeatedly as long as board is on ---------------
 
-uint32_t blue = strip.Color(59, 59, 111);
-uint32_t red = strip.Color(180, 47, 53);
-uint32_t white = strip.Color(30, 30, 65);
-uint32_t white2 = strip.Color(40, 40, 75);
-// uint32_t background = strip.Color(40, 10, 93);
-uint32_t background = strip.Color(1, 1, 19);
-
-// Rgb color_end = {115, 222, 86};
-// Rgb color_start = {119, 0, 255};
-
-// Rgb color_start = {6, 28, 1};
-
-Rgb color_end = {255, 0, 0};
-Rgb color_start = {0, 0, 255};
-
-int r1 = 115;
-int g1 = 222;
-int b1 = 86;
-int r2 = 119;
-int g2 = 0;
-int b2 = 255;
-
-#define LINE_LEN 10 // MAX
-Rgb line[LINE_LEN];
-
-void init_line() {
-  float pct, rx, gx, bx;
-
-  for (int i = 0; i < LINE_LEN; i++) {
-    pct = (float)i / (float)(LINE_LEN - 1);
-    rx = (float)color_start.r * pct + (float)color_end.r * (1 - pct);
-    gx = (float)color_start.g * pct + (float)color_end.g * (1 - pct);
-    bx = (float)color_start.b * pct + (float)color_end.b * (1 - pct);
-    line[i] = {(int)rx, (int)gx, (int)bx};
-  }
-}
-
 // Row start decimal is the row start * 10
 void render_line_at(int row_start_decimal, int col, int len) {
   float pct, rx, gx, bx;
-  Rgb _color_start, _color_end;
 
   int row_start = ceil((float)row_start_decimal / 10.0);
   int additional_px = 0;
@@ -114,19 +186,11 @@ void render_line_at(int row_start_decimal, int col, int len) {
 
   float coef = 1;// (float)(1.0 - ((float)1.0 / (float)(len - 1)));
 
-  /*if (shift == 0) {
-    _color_start = {(int)(color_start.r * coef) + (int)(color_end.r * (1 - coef)), (int)(color_start.g * coef) + (int)(color_end.g * (1 - coef)), (int)(color_start.b * coef) + (int)(color_end.b * (1 - coef))};
-    _color_end = {(int)(color_end.r * coef) + (int)(color_start.r * (1 - coef)), (int)(color_end.g * coef) + (int)(color_start.g * (1 - coef)), (int)(color_end.b * coef) + (int)(color_start.b * (1 - coef))};
-  } else {*/
-    _color_start = color_start;
-    _color_end = color_end;
-  //}
-
   for (int i = 0; i < len; i++) {
     pct = (float)i / (float)(len - 1);
-    rx = (float)_color_start.r * pct + (float)_color_end.r * (1 - pct);
-    gx = (float)_color_start.g * pct + (float)_color_end.g * (1 - pct);
-    bx = (float)_color_start.b * pct + (float)_color_end.b * (1 - pct);
+    rx = (float)color_start.r * pct + (float)color_end.r * (1 - pct);
+    gx = (float)color_start.g * pct + (float)color_end.g * (1 - pct);
+    bx = (float)color_start.b * pct + (float)color_end.b * (1 - pct);
     line[i] = {(int)rx, (int)gx, (int)bx};
   }
 
@@ -183,40 +247,15 @@ void render_line_at(int row_start_decimal, int col, int len) {
 }
 
 void loop() {
-  //Serial.begin(9600); // Démarrage de la communication série  
+  Serial.begin(9600); // Démarrage de la communication série  
   //Serial.print("starting...");
-  
-
-  for (int i = 0; i <= 26; i++) {
-    //render_line_at(70 + i, i, 7);
-  }
-
-  /*render_line_at(80, 7, 7);
-  render_line_at(81, 11, 7);
-  render_line_at(85, 15, 7);
-  render_line_at(89, 19, 7);
-  render_line_at(90, 23, 7);
-  strip.show();
-  while(true) {}*/
-
-  //return;
-  //for (int i = 0; i < 27 + 13; i++) {
-    //bhm_gradient_line(0, i, i, 0, 0, 65534);
-  //}
 
   aurora_loop();
-
-  //strip.setPixelColor(cartesianToStrip(i, i), strip.Color(  255,   0, 0));
 }
-
-
-// Some functions of our own for creating animated effects -----------------
-
-int cycle = 0;
-Rgb a, b, y, z; // a & b: two top pixels, y & z: two down pixels
 
 void aurora_loop() {
   while (true) {
+    timer.tick();
     cycle++;
     if (cycle > 10) {
       cycle = 0;
@@ -263,6 +302,7 @@ void render_lines() {
     // Blue 66, 148, 154
 
     render_line_at(starting_lines_row[i], starting_lines_col[i], lines_len[i]);
+    render_line_at(starting_lines_row2[i], starting_lines_col2[i], lines_len2[i]);
   }
 }
 
@@ -277,7 +317,7 @@ void update_lines() {
       // Update current direction
       
       if (i == 0) {
-        if (rand() % 2 == 0 && starting_lines_row[i] > 7 * 10) {
+        if (rand() % 2 == 0 && starting_lines_row[i] > 9 * 10) {
           current_direction[i] = -1;
         } else if(starting_lines_row[i] < 12 * 10) {
           current_direction[i] = 1;
@@ -296,18 +336,56 @@ void update_lines() {
             current_direction[i] = 0;
           }
         } else if (starting_lines_row[i - 1] - starting_lines_row[i] == -1 * 10) {
-          if (rand() % random_chance == 0 && (starting_lines_row[i] - lines_len[i]) > 7 * 10) {
+          if (rand() % random_chance == 0 && (starting_lines_row[i] - lines_len[i]) > 9 * 10) {
             current_direction[i] = -1;
           } else {
             current_direction[i] = 0;
           }
         } else {
-          if (rand() % 2 == 0 && (starting_lines_row[i] - lines_len[i]) > 7 * 10) {
+          if (rand() % 2 == 0 && (starting_lines_row[i] - lines_len[i]) > 9 * 10) {
             current_direction[i] = -1;
           } else if (starting_lines_row[i] < 12 * 10) {
             current_direction[i] = 1;
           } else {
             current_direction[i] = 1;
+          }
+        }
+      }
+
+      // SECOND AURORA
+
+      if (i == 0) {
+        if (rand() % 2 == 0 && starting_lines_row2[i] > 3 * 10) {
+          current_direction2[i] = -1;
+        } else if(starting_lines_row2[i] < 6 * 10) {
+          current_direction2[i] = 1;
+        } else {
+          current_direction2[i] = 0;
+        }
+      } else {
+        if (starting_lines_row2[i - 1] - starting_lines_row2[i] > 1 * 5) {
+          current_direction2[i] = 1;
+        } else if (starting_lines_row2[i - 1] - starting_lines_row2[i] < -1 * 5) {
+          current_direction2[i] = -1;
+        } else if (starting_lines_row2[i - 1] - starting_lines_row2[i] == 1 * 10) {
+          if (rand() % random_chance == 0 && starting_lines_row2[i] < 6 * 10) {
+            current_direction2[i] = 1;
+          } else {
+            current_direction2[i] = 0;
+          }
+        } else if (starting_lines_row2[i - 1] - starting_lines_row2[i] == -1 * 10) {
+          if (rand() % random_chance == 0 && (starting_lines_row2[i] - lines_len2[i]) > 3 * 10) {
+            current_direction2[i] = -1;
+          } else {
+            current_direction2[i] = 0;
+          }
+        } else {
+          if (rand() % 2 == 0 && (starting_lines_row2[i] - lines_len2[i]) > 3 * 10) {
+            current_direction2[i] = -1;
+          } else if (starting_lines_row2[i] < 6 * 10) {
+            current_direction2[i] = 1;
+          } else {
+            current_direction2[i] = 1;
           }
         }
       }
@@ -324,6 +402,12 @@ void update_lines() {
       starting_lines_row[i]--;
     } else if (current_direction[i] == 1) {
       starting_lines_row[i]++;
+    }
+
+    if (current_direction2[i] == -1) {
+      starting_lines_row2[i]--;
+    } else if (current_direction2[i] == 1) {
+      starting_lines_row2[i]++;
     }
   }
 }
