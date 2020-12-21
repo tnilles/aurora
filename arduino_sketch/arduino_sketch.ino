@@ -15,7 +15,8 @@
 #define ROWS      13
 #define COLS      27
 #define LED_COUNT COLS * ROWS
-#define AURORA_LEN 14 // 20 for ONE AURORA
+#define AURORA_LEN 14 // when having two smaller auroras
+#define FULL_AURORA_LEN 20
 
 auto timer = timer_create_default();
 
@@ -31,14 +32,15 @@ uint32_t matrix[ROWS][COLS];
 
 // setup() function -- runs once at startup --------------------------------
 
-int starting_lines_row[AURORA_LEN];
-int starting_lines_col[AURORA_LEN];
-int lines_len[AURORA_LEN];
-int current_direction[AURORA_LEN];
+bool full_aurora_mode = true;
+
+int starting_lines_row[FULL_AURORA_LEN];
+int starting_lines_col;
+int lines_len[FULL_AURORA_LEN];
+int current_direction[FULL_AURORA_LEN];
 
 int starting_lines_row2[AURORA_LEN];
-int starting_lines_col2[AURORA_LEN];
-int lines_len2[AURORA_LEN];
+int starting_lines_col2;
 int current_direction2[AURORA_LEN];
 
 Rgb color_end = {115, 222, 86};
@@ -47,7 +49,7 @@ Rgb color_start = {119, 0, 255};
 //Rgb color_end = {255, 0, 0};
 //Rgb color_start = {0, 0, 255};
 
-float modifiers[AURORA_LEN];
+float modifiers[FULL_AURORA_LEN];
 
 uint32_t white = strip.Color(30, 30, 65);
 uint32_t white2 = strip.Color(40, 40, 75);
@@ -68,20 +70,25 @@ bool visible_aurora = true;
 
 
 void init_lines() {
-  for (int i = 0; i < AURORA_LEN; i++) {
-    starting_lines_row[i] = 12 * 10;
-    starting_lines_col[i] = i + 2;
-    lines_len[i] = 4;
+  int length = AURORA_LEN;
 
-    starting_lines_row2[i] = 6 * 10;
-    starting_lines_col2[i] = i + 12;
-    lines_len2[i] = 4;
+  if (full_aurora_mode == true) {
+    length = FULL_AURORA_LEN;
+  }
 
+  for (int i = 0; i < length; i++) {
+    starting_lines_row[i] = 10 * 10;
+    starting_lines_col = 3;
+    lines_len[i] = 7;
 
-    // One aurora
-    /*starting_lines_row[i] = 10 * 10;
-    starting_lines_col[i] = i + 3;
-    lines_len[i] = 4; //rand() % 4 + 3;*/
+    if (full_aurora_mode == false) {
+      starting_lines_row[i] = 12 * 10;
+      starting_lines_col = 2;
+      starting_lines_row2[i] = 6 * 10;
+      starting_lines_col2 = 12;
+      lines_len[i] = 4;
+    }
+
     modifiers[i] = 1.0;
   }
 }
@@ -117,6 +124,11 @@ bool update_toggle_aurora_pct(void *) {
       lerp(color_src_end.g, color_background.g, toggle_aurora_pct),
       lerp(color_src_end.b, color_background.b, toggle_aurora_pct)
     };
+  }
+
+  if (visible_aurora == false && toggle_aurora_pct >= 0.99) {
+    full_aurora_mode = !full_aurora_mode;
+    init_lines();
   }
 
   return (toggle_aurora_pct >= 0.99) ? false : true;
@@ -247,7 +259,7 @@ void render_line_at(int row_start_decimal, int col, int len) {
 }
 
 void loop() {
-  Serial.begin(9600); // Démarrage de la communication série  
+  Serial.begin(9600);
   //Serial.print("starting...");
 
   aurora_loop();
@@ -264,20 +276,13 @@ void aurora_loop() {
     update_lines();
     render_lines();
     strip.show();
-    //delay(50);
   }
 }
 
 void clear_screen() {
-  //for (int i = 0; i < LED_COUNT; i++) {
-    //strip.setPixelColor(i, background);
-  //}
-
   for (int col = 0; col < COLS; col++) {
     bhm_gradient_line_rgb(col, 12, col, 0, 1, 1, 19, 0, 0, 4);
   }
-
-  //return;
 
   // Stars
   strip.setPixelColor(cartesianToStrip(3, 1), (rand() % 10 == 0) ? white : white2);
@@ -295,21 +300,37 @@ void clear_screen() {
 }
 
 void render_lines() {
-  for (int i = 0; i < AURORA_LEN; i++) {
+  int length = AURORA_LEN;
+
+  if (full_aurora_mode == true) {
+    length = FULL_AURORA_LEN;
+  }
+
+  for (int i = 0; i < length; i++) {
     // Green 115, 222, 86
     // Purple 119, 0, 255
     // Red 232, 72, 142
     // Blue 66, 148, 154
 
-    render_line_at(starting_lines_row[i], starting_lines_col[i], lines_len[i]);
-    render_line_at(starting_lines_row2[i], starting_lines_col2[i], lines_len2[i]);
+    render_line_at(starting_lines_row[i], starting_lines_col + i, lines_len[i]);
+
+    if (full_aurora_mode == false) {
+      render_line_at(starting_lines_row2[i], starting_lines_col2 + i, lines_len[i]);
+    }
   }
 }
 
 void update_lines() {
   int random_chance = 2;
+  int length = AURORA_LEN;
+  int aurora1_upper_limit = 9;
+
+  if (full_aurora_mode == true) {
+    length = FULL_AURORA_LEN;
+    aurora1_upper_limit = 7;
+  }
   
-  for (int i = 0; i < AURORA_LEN; i++) {
+  for (int i = 0; i < length; i++) {
     // Update starting rows
     if (cycle == 0 || cycle == 5) {
       // Update starting lines row – begginning of a new cycle
@@ -317,7 +338,7 @@ void update_lines() {
       // Update current direction
       
       if (i == 0) {
-        if (rand() % 2 == 0 && starting_lines_row[i] > 9 * 10) {
+        if (rand() % 2 == 0 && starting_lines_row[i] > aurora1_upper_limit * 10) {
           current_direction[i] = -1;
         } else if(starting_lines_row[i] < 12 * 10) {
           current_direction[i] = 1;
@@ -336,13 +357,13 @@ void update_lines() {
             current_direction[i] = 0;
           }
         } else if (starting_lines_row[i - 1] - starting_lines_row[i] == -1 * 10) {
-          if (rand() % random_chance == 0 && (starting_lines_row[i] - lines_len[i]) > 9 * 10) {
+          if (rand() % random_chance == 0 && (starting_lines_row[i] - lines_len[i]) > aurora1_upper_limit * 10) {
             current_direction[i] = -1;
           } else {
             current_direction[i] = 0;
           }
         } else {
-          if (rand() % 2 == 0 && (starting_lines_row[i] - lines_len[i]) > 9 * 10) {
+          if (rand() % 2 == 0 && (starting_lines_row[i] - lines_len[i]) > aurora1_upper_limit * 10) {
             current_direction[i] = -1;
           } else if (starting_lines_row[i] < 12 * 10) {
             current_direction[i] = 1;
@@ -354,38 +375,40 @@ void update_lines() {
 
       // SECOND AURORA
 
-      if (i == 0) {
-        if (rand() % 2 == 0 && starting_lines_row2[i] > 3 * 10) {
-          current_direction2[i] = -1;
-        } else if(starting_lines_row2[i] < 6 * 10) {
-          current_direction2[i] = 1;
-        } else {
-          current_direction2[i] = 0;
-        }
-      } else {
-        if (starting_lines_row2[i - 1] - starting_lines_row2[i] > 1 * 5) {
-          current_direction2[i] = 1;
-        } else if (starting_lines_row2[i - 1] - starting_lines_row2[i] < -1 * 5) {
-          current_direction2[i] = -1;
-        } else if (starting_lines_row2[i - 1] - starting_lines_row2[i] == 1 * 10) {
-          if (rand() % random_chance == 0 && starting_lines_row2[i] < 6 * 10) {
+      if (full_aurora_mode == false) {
+        if (i == 0) {
+          if (rand() % 2 == 0 && starting_lines_row2[i] > 3 * 10) {
+            current_direction2[i] = -1;
+          } else if(starting_lines_row2[i] < 6 * 10) {
             current_direction2[i] = 1;
           } else {
             current_direction2[i] = 0;
           }
-        } else if (starting_lines_row2[i - 1] - starting_lines_row2[i] == -1 * 10) {
-          if (rand() % random_chance == 0 && (starting_lines_row2[i] - lines_len2[i]) > 3 * 10) {
-            current_direction2[i] = -1;
-          } else {
-            current_direction2[i] = 0;
-          }
         } else {
-          if (rand() % 2 == 0 && (starting_lines_row2[i] - lines_len2[i]) > 3 * 10) {
+          if (starting_lines_row2[i - 1] - starting_lines_row2[i] > 1 * 5) {
+            current_direction2[i] = 1;
+          } else if (starting_lines_row2[i - 1] - starting_lines_row2[i] < -1 * 5) {
             current_direction2[i] = -1;
-          } else if (starting_lines_row2[i] < 6 * 10) {
-            current_direction2[i] = 1;
+          } else if (starting_lines_row2[i - 1] - starting_lines_row2[i] == 1 * 10) {
+            if (rand() % random_chance == 0 && starting_lines_row2[i] < 6 * 10) {
+              current_direction2[i] = 1;
+            } else {
+              current_direction2[i] = 0;
+            }
+          } else if (starting_lines_row2[i - 1] - starting_lines_row2[i] == -1 * 10) {
+            if (rand() % random_chance == 0 && (starting_lines_row2[i] - lines_len[i]) > 3 * 10) {
+              current_direction2[i] = -1;
+            } else {
+              current_direction2[i] = 0;
+            }
           } else {
-            current_direction2[i] = 1;
+            if (rand() % 2 == 0 && (starting_lines_row2[i] - lines_len[i]) > 3 * 10) {
+              current_direction2[i] = -1;
+            } else if (starting_lines_row2[i] < 6 * 10) {
+              current_direction2[i] = 1;
+            } else {
+              current_direction2[i] = 1;
+            }
           }
         }
       }
@@ -404,10 +427,12 @@ void update_lines() {
       starting_lines_row[i]++;
     }
 
-    if (current_direction2[i] == -1) {
-      starting_lines_row2[i]--;
-    } else if (current_direction2[i] == 1) {
-      starting_lines_row2[i]++;
+    if (full_aurora_mode == false) {
+      if (current_direction2[i] == -1) {
+        starting_lines_row2[i]--;
+      } else if (current_direction2[i] == 1) {
+        starting_lines_row2[i]++;
+      }
     }
   }
 }
@@ -430,26 +455,4 @@ void bhm_gradient_line_rgb(int x1, int y1, int x2, int y2, int r1, int g1, int b
     bx = (float)b1 * pct + (float)b2 * (1 - pct);
     strip.setPixelColor(cartesianToStrip(x1, i), strip.Color((int)rx, (int)gx, (int)bx));
   }
-}
-
-// fast drawing where x1 == x2
-void bhm_gradient_line(int x1, int y1, int x2, int y2, long startHue, long endHue) {
-  long hue;
-  int gradStep;
-  int yStart = min(y1, y2);
-  int yEnd = max(y1, y2);
-  hue = startHue;
-  gradStep = gradientStep(startHue, endHue, yEnd - yStart + 1);
-  
-  for (int i = yStart; i <= yEnd; i++) {
-    strip.setPixelColor(cartesianToStrip(x1, i), strip.gamma32(strip.ColorHSV(hue)));
-    hue += gradStep;
-  }
-}
-
-long gradientStep(long startHue, long endHue, int len) {
-  startHue = startHue % 65535;
-  endHue = endHue % 65535;
-
-  return (endHue - startHue) / len;
 }
